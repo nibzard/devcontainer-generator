@@ -164,4 +164,3 @@ document.addEventListener('DOMContentLoaded', function() {
   initializeButtons();
   setupObserver();
 });
-

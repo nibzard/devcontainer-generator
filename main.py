@@ -3,6 +3,7 @@ import os
 import json
 from datetime import datetime
 from fasthtml.common import *
+from fastcore.xtras import timed_cache
 from dotenv import load_dotenv
 from supabase_client import supabase
 
@@ -13,6 +14,7 @@ from helpers.token_helpers import count_tokens, truncate_to_token_limit
 from models import DevContainer
 from schemas import DevContainerModel
 from content import *
+from home_components import *
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -51,7 +53,6 @@ hdrs = [
             y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
         })(window, document, "clarity", "script", "o5om7ajkg6");
     """),
-    picolink,
     Meta(charset='UTF-8'),
     Meta(name='viewport', content='width=device-width, initial-scale=1.0, maximum-scale=1.0'),
     Meta(name='description', content=description),
@@ -62,9 +63,9 @@ hdrs = [
         twitter_site='@daytonaio',
         image=f'/assets/og-sq.png',
         url=''),
-    Script(src='https://cdn.jsdelivr.net/gh/gnat/surreal@main/surreal.js'),
     scopesrc,
     Link(rel="stylesheet", href="/css/main.css"),
+    Link(href='css/tailwind.css', rel='stylesheet'),
 ]
 
 # Initialize FastHTML app
@@ -78,7 +79,16 @@ scripts = (
     Script(src="/js/main.js"),
 )
 
-from fastcore.xtras import timed_cache
+def faq_section():
+    return section_wrapper(
+        Div(
+            section_header( "FAQ", "Questions? Answers.", "Your top FastHTML questions clarified.",
+                max_width=21, center=False),
+            Div(
+                *[faq_item(question, answer, i+3) for i, (question, answer) in enumerate(faqs)],
+                cls=f"{col} gap-4 {maxrem(32)} transition ease-out delay-[300ms]"),
+            cls=f"{section_base} w-full mx-auto lg:flex-row items-start max-w-7xl"),
+        bg_color="blue")
 
 # Main page composition
 @timed_cache(seconds=60)

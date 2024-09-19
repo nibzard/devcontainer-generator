@@ -1,4 +1,5 @@
 from fasthtml.common import *
+from home_components import accordion,col,inset,bnset
 
 description = 'Generate Custom Dev Containers in Seconds with AI'
 _blank = dict(target="_blank", rel="noopener noreferrer")
@@ -6,9 +7,9 @@ _blank = dict(target="_blank", rel="noopener noreferrer")
 def hero_section():
     return Section(
         Div(
-            H1("AI-Powered Dev Container Generator", cls="text-3xl font-bold text-center"),
-            H2("Simplify your development workflow with AI-powered dev container configurations"),
-            P("Generate customized devcontainer.json files from GitHub repositories with ease.", cls="text-lg text-center mt-4"),
+            H1("AI-Powered Dev Environment Setup", cls="text-3xl font-bold text-center"),
+            H2("From GitHub to Ready-to-Code in Seconds"),
+            P("Paste your GitHub URL, get a custom devcontainer.json", cls="text-lg text-center mt-4"),
             cls="container mx-auto px-4 py-16"
         ),
         cls="bg-gray-100",
@@ -19,7 +20,7 @@ def generator_section():
     return Section(
         Form(
             Group(
-                Input(type="text", name="repo_url", placeholder="Enter GitHub repository URL", cls="form-input"),
+                Input(type="text", name="repo_url", placeholder="Your GitHub repository URL", cls="form-input"),
                 Button(
                     Div(
                         Img(src="assets/icons/magic-wand.svg", cls="svg-icon"),
@@ -48,7 +49,7 @@ def generator_section():
 def benefits_section():
     return Section(
         Div(
-            H2("Benefits of Using Dev Containers", cls="text-2xl font-bold text-center mb-8"),
+            H2("Benefits of Development Containers", cls="text-2xl font-bold text-center mb-8"),
             Div(
                 benefit_card("Consistency", "Ensure every team member uses the same development environment, regardless of their local setup."),
                 benefit_card("Reproducibility", "Easily recreate a specific development environment for bug reproduction or testing."),
@@ -72,18 +73,16 @@ def setup_section():
     return Section(
         Div(
             H2("Setting Up Dev Containers in Your Repository", cls="text-2xl font-bold text-center mb-8"),
-            P("Once you have your `devcontainer.json` file, follow these steps:", cls="text-gray-700 container mx-auto mb-4"),
+            P("Once you generate dev container for your project, follow these steps:", cls="text-gray-700 container mx-auto mb-4"),
             Ul(
-                Li("Create a `.devcontainer` directory in the root of your repository."),
-                Li("Place the `devcontainer.json` file inside the `.devcontainer` directory."),
-                Li("(Optional) Add a `Dockerfile` to the `.devcontainer` directory if you need to customize the base image further."),
+                Li("Create a `devcontainer.json` file inside the `.devcontainer` directory in the root of your repository."),
                 Li("Open your repository in VS Code or ",
                     A("Daytona", href="https://daytona.io", **_blank,
                         cls="border-b-2 border-b-black/30 hover:border-b-black/80"),
                    "and it will automatically detect the dev container configuration."),
                 cls="list-decimal list-inside text-gray-700 mb-8"
             ),
-            P("Now you're ready to develop inside your consistent and isolated environment!", cls="text-gray-700 container mx-auto"),
+            P("Now you're ready to develop inside your consistent and isolated dev environment!", cls="text-gray-700 container mx-auto"),
             cls="container mx-auto px-4 py-16"
         ),
     )
@@ -110,39 +109,56 @@ def example_card(repo_name, url):
         cls="bg-white rounded-md shadow-md p-6"
     )
 
-def faq_section():
-    return Section(
-        Div(
-            H2("Frequently Asked Questions", cls="text-2xl font-bold text-center mb-8"),
-            Div(
-                faq_item("What are the advantages of using a dev container?",
-                         "Dev containers provide a consistent and isolated environment for development, ensuring that all team members have the same setup and dependencies."),
-                faq_item("How does the dev container generation process work?",
-                         "The process is simple: 1) Enter your GitHub repo URL, 2) Our AI analyzes your project, 3) Get a custom devcontainer.json in seconds, 4) Start coding in your optimized environment."),
-                faq_item("Which development tools are compatible with the generated dev containers?",
-                         "Our generated dev containers work seamlessly with Daytona, VS Code, GitHub Codespaces, and other popular dev tools."),
-                faq_item("What are the advantages of using a dev container?",
-                         "Dev containers provide a consistent and isolated environment for development, ensuring that all team members have the same setup and dependencies."),
-                faq_item("Can I customize the generated dev container?",
-                         "Yes, you can further customize the dev container for example by adding a `Dockerfile` to the `.devcontainer` directory or adding more Dev Container features."),
-                faq_item("What if my repository already has a dev container?",
-                         "Our generator will detect existing `devcontainer.json` files and try to use them as a starting point for customization. You can also choose to regenerate a new configuration."),
-                faq_item("How often should I update my dev container configuration?",
-                         "It's a good practice to update your dev container configuration whenever you make significant changes to your project's dependencies or development environment. You can easily regenerate the configuration using our tool."),
-                faq_item("Does this service work with private GitHub repositories?",
-                         "Currently, our dev container generator only works with public GitHub repositories. This ensures that we can analyze the necessary metadata without requiring additional authentication or permissions."),
-                cls="accordion container mx-auto",
-            ),
-            cls="container mx-auto px-4 py-16",
-        ),
-    )
+faqs = [
+    ("What are the advantages of using a dev container?",
+     "Dev containers provide a consistent and isolated environment for development, ensuring that all team members have the same setup and dependencies."),
+    ("How does the dev container generation process work?",
+     "The process is simple: 1) Enter your GitHub repo URL, 2) Our AI analyzes your project, 3) Get a custom devcontainer.json in seconds, 4) Start coding in your optimized environment."),
+    ("Which development tools are compatible with the generated dev containers?",
+     "Our generated dev containers work seamlessly with Daytona, VS Code, GitHub Codespaces, and other popular dev tools."),
+    ("Can I customize the generated dev container?",
+     "Yes, you can further customize the dev container for example by adding a `Dockerfile` to the `.devcontainer` directory or adding more Dev Container features."),
+    ("What if my repository already has a dev container?",
+     "Our generator will detect existing `devcontainer.json` files and try to use them as a starting point for customization. You can also choose to regenerate a new configuration."),
+    ("How often should I update my dev container configuration?",
+     "It's a good practice to update your dev container configuration whenever you make significant changes to your project's dependencies or development environment. You can easily regenerate the configuration using our tool."),
+    ("Does this service work with private GitHub repositories?",
+     "Currently, our dev container generator only works with public GitHub repositories. This ensures that we can analyze the necessary metadata without requiring additional authentication or permissions."),
+]
 
-def faq_item(question, answer):
-    return Div(
-        H3(question, cls="text-lg font-medium cursor-pointer"),
-        Div(P(answer, cls="text-gray-700 mt-2"), cls="hidden"),
-        cls="mb-4",
-        **{"_surreal": "on click toggle class:hidden for next-sibling"}
+# def faq_section():
+#     return Section(
+#         Div(
+#             H2("Frequently Asked Questions", cls="text-2xl font-bold text-center mb-8"),
+#             Div(
+#                 faq_item("What are the advantages of using a dev container?",
+#                          "Dev containers provide a consistent and isolated environment for development, ensuring that all team members have the same setup and dependencies."),
+#                 faq_item("How does the dev container generation process work?",
+#                          "The process is simple: 1) Enter your GitHub repo URL, 2) Our AI analyzes your project, 3) Get a custom devcontainer.json in seconds, 4) Start coding in your optimized environment."),
+#                 faq_item("Which development tools are compatible with the generated dev containers?",
+#                          "Our generated dev containers work seamlessly with Daytona, VS Code, GitHub Codespaces, and other popular dev tools."),
+#                 faq_item("What are the advantages of using a dev container?",
+#                          "Dev containers provide a consistent and isolated environment for development, ensuring that all team members have the same setup and dependencies."),
+#                 faq_item("Can I customize the generated dev container?",
+#                          "Yes, you can further customize the dev container for example by adding a `Dockerfile` to the `.devcontainer` directory or adding more Dev Container features."),
+#                 faq_item("What if my repository already has a dev container?",
+#                          "Our generator will detect existing `devcontainer.json` files and try to use them as a starting point for customization. You can also choose to regenerate a new configuration."),
+#                 faq_item("How often should I update my dev container configuration?",
+#                          "It's a good practice to update your dev container configuration whenever you make significant changes to your project's dependencies or development environment. You can easily regenerate the configuration using our tool."),
+#                 faq_item("Does this service work with private GitHub repositories?",
+#                          "Currently, our dev container generator only works with public GitHub repositories. This ensures that we can analyze the necessary metadata without requiring additional authentication or permissions."),
+#                 cls="accordion container mx-auto",
+#             ),
+#             cls="container mx-auto px-4 py-16",
+#         ),
+#     )
+
+def faq_item(question, answer, id):
+    return accordion(
+        id=id, question=question, answer=answer,
+        question_cls="text-black s-body",
+        answer_cls="s-body text-black/80 col-span-full",
+        container_cls=f"{col} justify-between bg-soft-blue rounded-[1.25rem] {bnset}"
     )
 
 def cta_section():
