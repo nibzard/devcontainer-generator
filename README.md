@@ -96,6 +96,19 @@ The project uses an SQLite database to store the generated `devcontainer.json` f
 
 The JSON schema for the `devcontainer.json` file is located in `schemas/devContainer.base.schema.json`.
 
+### Dev Container Feature Catalog
+
+Before generating a configuration, the app fetches and safely parses the official
+[Microsoft/devcontainers collection index](https://github.com/devcontainers/devcontainers.github.io/blob/gh-pages/_data/collection-index.yml).
+It considers the full registry, removes invalid and duplicate entries, and sends only
+the collections relevant to the repository context to the model. Collection data is
+cached for one hour, with stale data retained across transient fetch failures. If no
+catalog is available, generation continues and the model is instructed not to invent
+Feature identifiers.
+
+The generated `features` object uses versioned Feature IDs only when repository
+evidence supports them; otherwise it remains empty.
+
 ## Setting Up Daytona Workspace
 
 **Steps to Set Up Daytona Workspace**
