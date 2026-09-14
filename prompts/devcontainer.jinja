@@ -10,7 +10,21 @@ An existing devcontainer.json file was found in the repository:
 Please use this as a reference and improve upon it, incorporating any new requirements or best practices.
 {% endif %}
 
-Begin by applying Chain of Thought (CoT) reasoning to decompose the context and task into logical, manageable components. Think slowly and pay attention to all important facts in the context such as the ports used by the application and the ports used for testing.
+Analyze the repository context carefully, including its run commands, service topology,
+development workflow, and the source-attributed port evidence.
+
+Port selection rules:
+- Treat the "Detected Forwarded Port Evidence" section as candidate evidence, not as a
+  command to forward every number.
+- Include every developer-facing application port that is explicitly supported by the
+  repository. Include multiple ports when the normal development workflow runs multiple
+  user-facing services.
+- Prefer executable configuration and run commands over prose when sources disagree.
+- Do not forward database, cache, test-only, or internal service ports unless developers
+  are expected to access them directly.
+- Never default to port 8000 and never copy a port solely from this prompt's example.
+- If the repository contains no credible port evidence, leave `forwardPorts` empty or null
+  instead of guessing.
 
 Generate a devcontainer.json file for this project. The file should include appropriate settings for the development environment based on the project's requirements and structure. The 'features' field is essential and should include a dictionary of features to enable within the container.
 
