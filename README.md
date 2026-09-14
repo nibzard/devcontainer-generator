@@ -74,6 +74,26 @@ python main.py
 3. Click the "Generate devcontainer.json" button.
 4. The generated `devcontainer.json` will be displayed and can be copied to your clipboard.
 
+### Fetching a devcontainer directly
+
+In a browser, append a GitHub repository URL as the page fragment. The app will
+open the generated `devcontainer.json` as plain text:
+
+```text
+https://devcontainer.ai/#https://github.com/daytonaio/daytona
+```
+
+For scripts, use the `/devcontainer` endpoint. URL fragments are handled only
+by browsers and are not sent as part of an HTTP request, so `curl` must pass the
+repository URL as a query parameter:
+
+```bash
+curl --get \
+  --data-urlencode "repo_url=https://github.com/daytonaio/daytona" \
+  https://devcontainer.ai/devcontainer \
+  > .devcontainer/devcontainer.json
+```
+
 ## Configuration
 
 ### Azure OpenAI and Instructor Clients

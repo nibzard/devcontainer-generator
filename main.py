@@ -4,21 +4,28 @@ import json
 from datetime import datetime
 from fasthtml.common import *
 from dotenv import load_dotenv
+from starlette.responses import PlainTextResponse
 from supabase_client import supabase
 
 from helpers.openai_helpers import setup_azure_openai, setup_instructor
-from helpers.github_helpers import fetch_repo_context, check_url_exists
+from helpers.github_helpers import fetch_repo_context, check_url_exists, is_valid_github_url
 from helpers.devcontainer_helpers import generate_devcontainer_json, validate_devcontainer_json
 from helpers.token_helpers import count_tokens, truncate_to_token_limit
 from models import DevContainer
 from schemas import DevContainerModel
 from content import *
 
+
+class InvalidRepositoryUrl(ValueError):
+    pass
+
+
 # Set up logging
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Load environment variables
 load_dotenv()
+
 
 def check_env_vars():
     required_vars = [
@@ -75,6 +82,7 @@ app, rt = fast_app(
 )
 
 scripts = (
+    Script(src="/js/hash-route.js"),
     Script(src="/js/main.js"),
 )
 
@@ -101,67 +109,95 @@ def home():
 async def get():
     return home()
 
-@rt("/generate", methods=["post"])
-async def post(repo_url: str, regenerate: bool = False):
+
+def resolve_devcontainer(repo_url: str, regenerate: bool = False):
+    """Return a generated, repository, or cached devcontainer result."""
     logging.info(f"Generating devcontainer.json for: {repo_url}")
 
     # Normalize the repo_url by stripping trailing slashes
-    repo_url = repo_url.rstrip('/')
+    repo_url = repo_url.rstrip("/")
+    if not is_valid_github_url(repo_url):
+        raise InvalidRepositoryUrl("Invalid GitHub repository URL")
 
-    try:
-        exists, existing_record = check_url_exists(repo_url)
-        logging.info(f"URL check result: exists={exists}, existing_record={existing_record}")
+    exists, existing_record = check_url_exists(repo_url)
+    logging.info(f"URL check result: exists={exists}, existing_record={existing_record}")
 
-        repo_context, existing_devcontainer, devcontainer_url = fetch_repo_context(repo_url)
-        logging.info(f"Fetched repo context. Existing devcontainer: {'Yes' if existing_devcontainer else 'No'}")
-        logging.info(f"Devcontainer URL: {devcontainer_url}")
+    repo_context, existing_devcontainer, devcontainer_url = fetch_repo_context(repo_url)
+    logging.info(
+        f"Fetched repo context. Existing devcontainer: "
+        f"{'Yes' if existing_devcontainer else 'No'}"
+    )
+    logging.info(f"Devcontainer URL: {devcontainer_url}")
 
-        if exists and not regenerate:
-            logging.info(f"URL already exists in database. Returning existing devcontainer_json for: {repo_url}")
-            devcontainer_json = existing_record['devcontainer_json']
-            generated = existing_record['generated']
-            source = "database"
-            url = existing_record['devcontainer_url']
+    if exists and not regenerate:
+        logging.info(
+            f"URL already exists in database. Returning existing "
+            f"devcontainer_json for: {repo_url}"
+        )
+        devcontainer_json = existing_record["devcontainer_json"]
+        generated = existing_record["generated"]
+        source = "database"
+    else:
+        devcontainer_json, url = generate_devcontainer_json(
+            instructor_client,
+            repo_url,
+            repo_context,
+            devcontainer_url,
+            regenerate=regenerate,
+        )
+        generated = True
+        source = "generated" if url is None else "repository"
+    if not exists or regenerate:
+        logging.info("Saving to database...")
+        if hasattr(openai_client.embeddings, "create"):
+            embedding_model = os.getenv("EMBEDDING", "text-embedding-ada-002")
+            max_tokens = int(os.getenv("EMBEDDING_MODEL_MAX_TOKENS", 8192))
+
+            truncated_context = truncate_to_token_limit(
+                repo_context, embedding_model, max_tokens
+            )
+
+            embedding = openai_client.embeddings.create(
+                input=truncated_context, model=embedding_model
+            ).data[0].embedding
+            embedding_json = json.dumps(embedding)
         else:
-            devcontainer_json, url = generate_devcontainer_json(instructor_client, repo_url, repo_context, devcontainer_url, regenerate=regenerate)
-            generated = True
-            source = "generated" if url is None else "repository"
+            embedding_json = None
+
+        new_devcontainer = DevContainer(
+            url=repo_url,
+            devcontainer_json=devcontainer_json,
+            devcontainer_url=devcontainer_url,
+            repo_context=repo_context,
+            tokens=count_tokens(repo_context),
+            model=os.getenv("MODEL"),
+            embedding=embedding_json,
+            generated=generated,
+            created_at=datetime.utcnow().isoformat()  # Ensure this is a string
+        )
+
+        # Convert the Pydantic model to a dictionary and handle datetime serialization
+        devcontainer_dict = json.loads(new_devcontainer.json(exclude_unset=True))
+
+        supabase.table("devcontainers").insert(devcontainer_dict).execute()
+        logging.info(
+            f"Successfully saved to database with devcontainer_url: {devcontainer_url}"
+        )
+
+    return {
+        "devcontainer_json": devcontainer_json,
+        "repo_url": repo_url,
+        "source": source,
+    }
 
 
-        if not exists or regenerate:
-            logging.info("Saving to database...")
-            try:
-                if hasattr(openai_client.embeddings, "create"):
-                    embedding_model = os.getenv("EMBEDDING", "text-embedding-ada-002")
-                    max_tokens = int(os.getenv("EMBEDDING_MODEL_MAX_TOKENS", 8192))
-
-                    truncated_context = truncate_to_token_limit(repo_context, embedding_model, max_tokens)
-
-                    embedding = openai_client.embeddings.create(input=truncated_context, model=embedding_model).data[0].embedding
-                    embedding_json = json.dumps(embedding)
-                else:
-                    embedding_json = None
-
-                new_devcontainer = DevContainer(
-                    url=repo_url,
-                    devcontainer_json=devcontainer_json,
-                    devcontainer_url=devcontainer_url,
-                    repo_context=repo_context,
-                    tokens=count_tokens(repo_context),
-                    model=os.getenv("MODEL"),
-                    embedding=embedding_json,
-                    generated=generated,
-                    created_at=datetime.utcnow().isoformat()  # Ensure this is a string
-                )
-
-                # Convert the Pydantic model to a dictionary and handle datetime serialization
-                devcontainer_dict = json.loads(new_devcontainer.json(exclude_unset=True))
-
-                result = supabase.table("devcontainers").insert(devcontainer_dict).execute()
-                logging.info(f"Successfully saved to database with devcontainer_url: {devcontainer_url}")
-            except Exception as e:
-                logging.error(f"Error while saving to database: {str(e)}")
-                raise
+@rt("/generate", methods=["post"])
+async def post(repo_url: str, regenerate: bool = False):
+    try:
+        result = resolve_devcontainer(repo_url, regenerate=regenerate)
+        devcontainer_json = result["devcontainer_json"]
+        repo_url = result["repo_url"]
+        source = result["source"]
 
         return Div(
             Article(f"Devcontainer.json {'found in ' + source if source in ['database', 'repository'] else 'generated'}"),
@@ -190,6 +226,24 @@ async def post(repo_url: str, regenerate: bool = False):
     except Exception as e:
         logging.error(f"An error occurred: {str(e)}", exc_info=True)
         return Div(H2("Error"), P(f"An error occurred: {str(e)}"))
+
+
+@rt("/devcontainer", methods=["get"])
+async def get_devcontainer(repo_url: str):
+    """Return devcontainer.json as text for curl and automation workflows."""
+    try:
+        result = resolve_devcontainer(repo_url, regenerate=False)
+        return PlainTextResponse(
+            result["devcontainer_json"],
+            headers={"Content-Disposition": 'inline; filename="devcontainer.json"'},
+        )
+    except InvalidRepositoryUrl as e:
+        logging.warning(f"Invalid devcontainer request: {str(e)}")
+        return PlainTextResponse(str(e), status_code=400)
+    except Exception as e:
+        logging.error(f"An error occurred: {str(e)}", exc_info=True)
+        return PlainTextResponse("Unable to generate devcontainer.json", status_code=500)
+
 
 @rt("/manifesto")
 async def get():

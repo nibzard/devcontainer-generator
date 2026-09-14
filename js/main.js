@@ -146,10 +146,13 @@ function validateRepoUrl() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  const repoUrlInput = document.querySelector('input[name="repo_url"]');
-  repoUrlInput.addEventListener('input', validateRepoUrl);
+  if (typeof redirectDevcontainerHash === 'function' && redirectDevcontainerHash()) return;
 
+  const repoUrlInput = document.querySelector('input[name="repo_url"]');
   const generateForm = document.getElementById('generate-form');
+  if (!repoUrlInput || !generateForm) return;
+
+  repoUrlInput.addEventListener('input', validateRepoUrl);
   generateForm.addEventListener('submit', function(event) {
       if (!validateRepoUrl()) {
           event.preventDefault();
@@ -164,4 +167,3 @@ document.addEventListener('DOMContentLoaded', function() {
   initializeButtons();
   setupObserver();
 });
-
