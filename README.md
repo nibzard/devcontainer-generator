@@ -74,6 +74,20 @@ python main.py
 3. Click the "Generate devcontainer.json" button.
 4. The generated `devcontainer.json` will be displayed and can be copied to your clipboard.
 
+### Evidence-based forwarded ports
+
+Before asking the language model to generate a configuration, the application recursively
+examines repository documentation, configuration, manifests, and relevant source files for
+port evidence. It recognizes explicit URLs, port flags and environment variables, Docker
+port mappings, `EXPOSE` directives, and common framework/server settings.
+
+Detected ports are added to the model context with file paths, line numbers, and short source
+snippets. The model is instructed to forward only developer-facing services supported by that
+evidence and to leave `forwardPorts` empty when no credible port is found rather than using a
+hard-coded fallback. Safety limits bound the number and total size of files fetched from very large
+repositories while prioritizing README, CONTRIBUTING, environment, Docker, Compose, and
+project manifest files.
+
 ## Configuration
 
 ### Azure OpenAI and Instructor Clients
